@@ -1,0 +1,16 @@
+# Dependencias y compilados pesados
+*.exe
+*.class
+*.o
+*.obj
+*.backup*.html
+__pycache__/
+*.pyc
+
+# Configuración local de IDEs
+.vscode/
+
+# Archivos temporales del sistema
+Thumbs.db
+Desktop.ini
+.DS_Store
