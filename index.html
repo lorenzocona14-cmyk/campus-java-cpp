@@ -2205,14 +2205,7 @@
       }
       if (!appState.activeVideoIndex) appState.activeVideoIndex = {};
       if (!appState.watchedVideos) appState.watchedVideos = {};
-      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-      if (!isLocalHost) {
-        if (!appState.playerEngine || appState.playerEngine === "native") {
-          appState.playerEngine = "cinema";
-        }
-      } else if (!appState.playerEngine) {
-        appState.playerEngine = "native";
-      }
+      appState.playerEngine = "native";
       if (!appState.activeEjercicioId) appState.activeEjercicioId = "ej-1";
       applyTheme();
       applySidebarState();
@@ -2542,14 +2535,7 @@
       const currentVideo = videoList[currentIdx];
       const isWatched = appState.watchedVideos && appState.watchedVideos[currentVideo.id];
       const watchedCount = videoList.filter(v => appState.watchedVideos && appState.watchedVideos[v.id]).length;
-      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-      let engine = appState.playerEngine;
-      if (!engine) {
-        engine = isLocalHost ? "native" : "cinema";
-      }
-      if (!isLocalHost && engine === "native") {
-        engine = "cinema";
-      }
+      const engine = appState.playerEngine || "native";
 
       return `
         <div class="content-container">
@@ -2584,10 +2570,7 @@
 
               <div style="display:flex; align-items:center; gap:8px;">
                 <button class="btn btn-outline" style="padding:6px 12px; font-size:0.8rem;" onclick="togglePlayerEngine()" title="Alternar modo de reproductor">
-                  ${isLocalHost 
-                    ? (engine === 'native' ? '🟢 Motor Streaming Local (Sin Bloqueos)' : '📺 Modo Iframe') 
-                    : (engine === 'cinema' ? '🎬 Modo Cinema HD (Recomendado)' : '📺 Modo Iframe Embebido')
-                  }
+                  ${engine === 'native' ? '🟢 Motor Streaming Nativo Activo' : '📺 Modo Iframe YouTube'}
                 </button>
                 <a href="${currentVideo.directUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-youtube">
                   ▶️ Ver en YouTube
@@ -2604,8 +2587,8 @@
                 <strong>Clase ${currentIdx + 1} de ${videoList.length}:</strong>
                 <span style="color:var(--text-muted); margin-left:6px;">${escapeHtml(currentVideo.title)}</span>
               </div>
-              <div style="font-size:0.78rem; font-weight:700; color:${engine === 'native' ? 'var(--accent-success)' : engine === 'cinema' ? '#f43f5e' : 'var(--brand-primary)'};">
-                ${engine === 'native' ? '⚡ Reproducción Directa Local' : engine === 'cinema' ? '🎬 Modo Cinema Cloud (YouTube Oficial)' : 'ℹ️ Modo Iframe Embebido'}
+              <div style="font-size:0.78rem; font-weight:700; color:${engine === 'native' ? 'var(--accent-success)' : 'var(--brand-primary)'};">
+                ${engine === 'native' ? '⚡ Reproducción Nativa Directa (Motor Streaming Activo)' : 'ℹ️ Modo Iframe YouTube'}
               </div>
             </div>
 
@@ -2741,12 +2724,7 @@
     }
 
     function togglePlayerEngine() {
-      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-      if (isLocalHost) {
-        appState.playerEngine = (appState.playerEngine === "native") ? "iframe" : "native";
-      } else {
-        appState.playerEngine = (appState.playerEngine === "cinema") ? "iframe" : "cinema";
-      }
+      appState.playerEngine = (appState.playerEngine === "native") ? "iframe" : "native";
       saveState();
       renderCurrentView();
     }
