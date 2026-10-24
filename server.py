@@ -63,6 +63,8 @@ def resolve_direct_stream(video_id):
         return None
 
 class AcademicPlatformHandler(http.server.SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
