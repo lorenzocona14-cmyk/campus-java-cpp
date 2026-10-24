@@ -5,43 +5,54 @@ import urllib.parse
 import json
 import yt_dlp
 
-# Cache en memoria para resolver instantáneamente URLs ya visitadas
 stream_cache = {}
 
 def resolve_direct_stream(video_id):
     if video_id in stream_cache:
         return stream_cache[video_id]
 
-    ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'ios']
+    client_candidates = [
+        ['tv_embedded'],
+        ['android'],
+        ['ios'],
+        ['mweb']
+    ]
+
+    last_error = None
+    for client_list in client_candidates:
+        ydl_opts = {
+            'quiet': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': client_list
+                }
             }
         }
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
-        stream_url = None
-        
-        # Prioridad 1: Formato 18 (MP4 360p audio+video combinado estandar)
-        for f in info.get('formats', []):
-            if f.get('format_id') == '18' and f.get('url'):
-                stream_url = f.get('url')
-                break
-        
-        # Prioridad 2: Cualquier formato combinado con audio y video
-        if not stream_url:
-            for f in info.get('formats', []):
-                if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url'):
-                    stream_url = f.get('url')
-                    break
-        
-        if stream_url:
-            stream_cache[video_id] = stream_url
-            return stream_url
-        return None
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+                stream_url = None
+                for f in info.get('formats', []):
+                    if f.get('format_id') == '18' and f.get('url'):
+                        stream_url = f.get('url')
+                        break
+                if not stream_url:
+                    for f in info.get('formats', []):
+                        if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url'):
+                            stream_url = f.get('url')
+                            break
+                if stream_url:
+                    stream_cache[video_id] = stream_url
+                    return stream_url
+        except Exception as e:
+            last_error = e
+            continue
+
+    if last_error:
+        raise last_error
+    return None
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -61,7 +72,7 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/plain; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(b"Parametro 'v' (ID del video) requerido")
+            self.wfile.write(b"Parametro 'v' requerido")
             return
 
         try:
@@ -71,7 +82,7 @@ class handler(BaseHTTPRequestHandler):
                 self.send_header('Content-Type', 'text/plain; charset=utf-8')
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
-                self.wfile.write(b"No se encontro flujo de streaming directo para este video.")
+                self.wfile.write(b"No se encontro flujo de streaming.")
                 return
 
             req_headers = {
