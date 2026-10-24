@@ -2207,7 +2207,9 @@
       if (!appState.watchedVideos) appState.watchedVideos = {};
       const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
       if (!isLocalHost) {
-        appState.playerEngine = "iframe";
+        if (!appState.playerEngine || appState.playerEngine === "native") {
+          appState.playerEngine = "cinema";
+        }
       } else if (!appState.playerEngine) {
         appState.playerEngine = "native";
       }
@@ -2540,8 +2542,14 @@
       const currentVideo = videoList[currentIdx];
       const isWatched = appState.watchedVideos && appState.watchedVideos[currentVideo.id];
       const watchedCount = videoList.filter(v => appState.watchedVideos && appState.watchedVideos[v.id]).length;
-      const engine = appState.playerEngine || "native";
-      const isLocalHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+      let engine = appState.playerEngine;
+      if (!engine) {
+        engine = isLocalHost ? "native" : "cinema";
+      }
+      if (!isLocalHost && engine === "native") {
+        engine = "cinema";
+      }
 
       return `
         <div class="content-container">
@@ -2575,8 +2583,11 @@
               </div>
 
               <div style="display:flex; align-items:center; gap:8px;">
-                <button class="btn btn-outline" style="padding:6px 12px; font-size:0.8rem;" onclick="togglePlayerEngine()" title="Alternar entre motor nativo anti-bloqueo y reproductor YouTube">
-                  ${engine === 'native' ? '🟢 Motor Streaming Nativo (Sin Bloqueos)' : '📺 Modo Iframe YouTube'}
+                <button class="btn btn-outline" style="padding:6px 12px; font-size:0.8rem;" onclick="togglePlayerEngine()" title="Alternar modo de reproductor">
+                  ${isLocalHost 
+                    ? (engine === 'native' ? '🟢 Motor Streaming Local (Sin Bloqueos)' : '📺 Modo Iframe') 
+                    : (engine === 'cinema' ? '🎬 Modo Cinema HD (Recomendado)' : '📺 Modo Iframe Embebido')
+                  }
                 </button>
                 <a href="${currentVideo.directUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-youtube">
                   ▶️ Ver en YouTube
@@ -2593,12 +2604,12 @@
                 <strong>Clase ${currentIdx + 1} de ${videoList.length}:</strong>
                 <span style="color:var(--text-muted); margin-left:6px;">${escapeHtml(currentVideo.title)}</span>
               </div>
-              <div style="font-size:0.78rem; font-weight:700; color:${engine === 'native' ? 'var(--accent-success)' : 'var(--brand-primary)'};">
-                ${engine === 'native' ? '⚡ Reproducción Directa Activada' : 'ℹ️ Modo Iframe YouTube'}
+              <div style="font-size:0.78rem; font-weight:700; color:${engine === 'native' ? 'var(--accent-success)' : engine === 'cinema' ? '#f43f5e' : 'var(--brand-primary)'};">
+                ${engine === 'native' ? '⚡ Reproducción Directa Local' : engine === 'cinema' ? '🎬 Modo Cinema Cloud (YouTube Oficial)' : 'ℹ️ Modo Iframe Embebido'}
               </div>
             </div>
 
-            <!-- RESPONSIVE VIDEO FRAME (DUAL ENGINE: NATIVE STREAM OR IFRAME) -->
+            <!-- RESPONSIVE VIDEO FRAME (DUAL ENGINE: NATIVE STREAM, IFRAME, OR CINEMA CARD) -->
             <div class="video-frame-wrapper" id="videoViewport">
               ${engine === 'native' ? `
                 <video 
@@ -2612,15 +2623,43 @@
                   onerror="onNativeVideoError('${currentVideo.id}', '${currentVideo.embedUrl}')">
                   Tu navegador no soporta reproducción nativa de video HTML5.
                 </video>
-              ` : `
+              ` : engine === 'iframe' ? `
                 <iframe 
                   id="lessonIframe"
                   src="${currentVideo.embedUrl}" 
-                  title="${currentVideo.title}" 
+                  title="${escapeHtml(currentVideo.title)}" 
                   referrerpolicy="strict-origin-when-cross-origin"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                   allowfullscreen>
                 </iframe>
+              ` : `
+                <!-- CINEMA CLOUD LAUNCHER (OPTIMIZADO PARA VERCEL Y MÓVILES) -->
+                <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background: radial-gradient(circle, rgba(15,23,42,0.88) 0%, rgba(2,6,23,0.96) 100%), url('https://img.youtube.com/vi/${currentVideo.id}/hqdefault.jpg') center/cover no-repeat; text-align:center; padding:20px; box-sizing:border-box;">
+                  <a href="${currentVideo.directUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none; display:flex; flex-direction:column; align-items:center; cursor:pointer;" title="Reproducir video en YouTube">
+                    <div style="width:74px; height:74px; border-radius:50%; background:linear-gradient(135deg, #ef4444, #dc2626); display:flex; align-items:center; justify-content:center; color:white; font-size:2rem; box-shadow:0 0 35px rgba(239,68,68,0.7); margin-bottom:12px; transition:transform 0.2s;">
+                      ▶
+                    </div>
+                    <div style="color:white; font-size:1.15rem; font-weight:800; text-shadow:0 2px 6px rgba(0,0,0,0.9);">
+                      Reproducir Clase en YouTube
+                    </div>
+                  </a>
+
+                  <div style="margin-top:12px; max-width:480px; color:#94a3b8; font-size:0.83rem; line-height:1.5;">
+                    <span style="color:#f8fafc; font-weight:600;">${escapeHtml(currentVideo.title)}</span><br>
+                    <span style="display:inline-block; margin-top:6px; font-size:0.76rem; background:rgba(255,255,255,0.08); padding:3px 10px; border-radius:12px; color:#cbd5e1;">
+                      📱 En celular o tablet se abre directamente en la App oficial de YouTube en 1080p
+                    </span>
+                  </div>
+
+                  <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+                    <a href="${currentVideo.directUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-youtube" style="padding:7px 16px; font-size:0.83rem;">
+                      ▶️ Ver en YouTube
+                    </a>
+                    <button class="btn btn-outline" style="padding:7px 14px; font-size:0.8rem; border-color:rgba(255,255,255,0.25); color:#e2e8f0;" onclick="togglePlayerEngine()">
+                      📺 Probar Modo Embebido Iframe
+                    </button>
+                  </div>
+                </div>
               `}
             </div>
 
@@ -2702,20 +2741,22 @@
     }
 
     function togglePlayerEngine() {
-      appState.playerEngine = (appState.playerEngine === "native") ? "iframe" : "native";
+      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+      if (isLocalHost) {
+        appState.playerEngine = (appState.playerEngine === "native") ? "iframe" : "native";
+      } else {
+        appState.playerEngine = (appState.playerEngine === "cinema") ? "iframe" : "cinema";
+      }
       saveState();
       renderCurrentView();
     }
 
     function onNativeVideoError(videoId, embedUrl) {
-      console.warn("Native stream error or offline file:// protocol, offering iframe fallback.");
-      const isLocalHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      if (!isLocalHost) {
-        // Automatically switch to iframe if user opened index.html without abrir_web.bat
-        appState.playerEngine = "iframe";
-        saveState();
-        renderCurrentView();
-      }
+      console.warn("Native stream error or offline file:// protocol, offering fallback.");
+      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+      appState.playerEngine = isLocalHost ? "iframe" : "cinema";
+      saveState();
+      renderCurrentView();
     }
 
     function selectLessonVideo(unitId, lang, idx) {
