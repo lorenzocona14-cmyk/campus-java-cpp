@@ -2535,9 +2535,18 @@
       const currentVideo = videoList[currentIdx];
       const isWatched = appState.watchedVideos && appState.watchedVideos[currentVideo.id];
       const watchedCount = videoList.filter(v => appState.watchedVideos && appState.watchedVideos[v.id]).length;
-      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-      const streamEndpoint = isLocalHost ? "/api/stream" : "https://reveals-assessments-introductory-experiments.trycloudflare.com/api/stream";
+      const streamEndpoint = getStreamEndpoint();
       const engine = appState.playerEngine || "native";
+
+      let engineBadgeText = "? Motor Streaming Nativo Activo";
+      let engineBtnLabel = "?? Motor Streaming Nativo";
+      if (engine === "iframe") {
+        engineBadgeText = "?? Modo Iframe YouTube";
+        engineBtnLabel = "?? Modo Iframe YouTube";
+      } else if (engine === "cinema") {
+        engineBadgeText = "?? Modo Cine UDA Activo";
+        engineBtnLabel = "?? Modo Cine UDA";
+      }
 
       return `
         <div class="content-container">
@@ -2562,23 +2571,23 @@
           <div class="video-theater">
             <div class="video-toolbar">
               <div class="video-switch-group">
-                <button class="video-switch-btn ${lang === 'cpp' ? 'active cpp' : ''}" onclick="switchVideoLang('cpp')">
-                  ⚡ Ver Clases C++ (${(u.videosCpp || []).length} videos ATS)
+                <button class="video-switch-btn " onclick="switchVideoLang('cpp')">
+                  ? Ver Clases C++ ( videos ATS)
                 </button>
-                <button class="video-switch-btn ${lang === 'java' ? 'active java' : ''}" onclick="switchVideoLang('java')">
-                  ☕ Ver Clases Java (${(u.videosJava || []).length} videos ATS/Arcila)
+                <button class="video-switch-btn " onclick="switchVideoLang('java')">
+                  ? Ver Clases Java ( videos ATS/Arcila)
                 </button>
               </div>
 
-              <div style="display:flex; align-items:center; gap:8px;">
-                <button class="btn btn-outline" style="padding:6px 12px; font-size:0.8rem;" onclick="togglePlayerEngine()" title="Alternar modo de reproductor">
-                  ${engine === 'native' ? '🟢 Motor Streaming Nativo Activo' : '📺 Modo Iframe YouTube'}
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <button class="btn btn-outline" style="padding:6px 12px; font-size:0.8rem;" onclick="togglePlayerEngine()" title="Alternar entre Motor Nativo, Modo Cine e Iframe">
+                  
                 </button>
-                <a href="${currentVideo.directUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-youtube">
-                  ▶️ Ver en YouTube
+                <a href="" target="_blank" rel="noopener noreferrer" class="btn btn-youtube">
+                  ?? Ver en YouTube
                 </a>
-                <button class="btn ${isWatched ? 'btn-success' : 'btn-secondary'}" style="padding:7px 14px; font-size:0.82rem;" onclick="toggleCurrentVideoWatched('${currentVideo.id}')">
-                  ${isWatched ? '✅ Video Visto (+15 XP)' : '✓ Marcar como Visto (+15 XP)'}
+                <button class="btn " style="padding:7px 14px; font-size:0.82rem;" onclick="toggleCurrentVideoWatched('')">
+                  
                 </button>
               </div>
             </div>
@@ -2586,27 +2595,17 @@
             <!-- Notice Bar regarding local file / YouTube player -->
             <div class="video-notice-bar">
               <div>
-                <strong>Clase ${currentIdx + 1} de ${videoList.length}:</strong>
-                <span style="color:var(--text-muted); margin-left:6px;">${escapeHtml(currentVideo.title)}</span>
+                <strong>Clase  de :</strong>
+                <span style="color:var(--text-muted); margin-left:6px;"></span>
               </div>
-              <div style="font-size:0.78rem; font-weight:700; color:${engine === 'native' ? 'var(--accent-success)' : 'var(--brand-primary)'};">
-                ${engine === 'native' ? '⚡ Reproducción Nativa Directa (Motor Streaming Activo)' : 'ℹ️ Modo Iframe YouTube'}
+              <div style="font-size:0.78rem; font-weight:700; color:;">
+                
               </div>
             </div>
 
-            <!-- RESPONSIVE VIDEO FRAME (MOTOR NATIVO DE STREAMING DIRECTO) -->
+            <!-- RESPONSIVE VIDEO FRAME (REPRODUCTOR MULTI-MOTOR INTELIGENTE) -->
             <div class="video-frame-wrapper" id="videoViewport">
-              <video 
-                id="lessonVideoPlayer"
-                src="${streamEndpoint}?v=${currentVideo.id}"
-                controls
-                playsinline
-                autoplay
-                preload="metadata"
-                poster="https://img.youtube.com/vi/${currentVideo.id}/hqdefault.jpg"
-                style="position:absolute; top:0; left:0; width:100%; height:100%; background:#000000; object-fit:contain;">
-                Tu navegador no soporta reproducción nativa de video HTML5.
-              </video>
+              
             </div>
 
             <!-- Video Metadata Bar -->
@@ -2686,16 +2685,130 @@
       `;
     }
 
-    function togglePlayerEngine() {
-      appState.playerEngine = (appState.playerEngine === "native") ? "iframe" : "native";
+    function getStreamEndpoint() {
+      if (typeof window === 'undefined') return '/api/stream';
+      const isLocalHost = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const isFileProto = (window.location.protocol === 'file:' || !window.location.hostname);
+      if (isLocalHost) {
+        return '/api/stream';
+      }
+      if (isFileProto) {
+        return 'http://127.0.0.1:3000/api/stream';
+      }
+      if (window.location.hostname.startsWith('192.168.')) {
+        return 'http://' + window.location.hostname + ':3000/api/stream';
+      }
+      return '/api/stream';
+    }
+
+    function renderVideoViewport(currentVideo, engine, streamEndpoint) {
+      if (engine === 'iframe') {
+        return 
+          <iframe 
+            id="lessonIframePlayer"
+            src=""
+            title=""
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; background:#000;">
+          </iframe>
+        ;
+      }
+      
+      if (engine === 'cinema') {
+        return renderCinemaFallback(currentVideo);
+      }
+
+      // engine === 'native' (HTML5 MP4 Streaming)
+      return 
+        <video 
+          id="lessonVideoPlayer"
+          src="?v="
+          controls
+          playsinline
+          preload="metadata"
+          poster="https://img.youtube.com/vi//hqdefault.jpg"
+          onerror="handleNativeVideoError('', '', '')"
+          style="position:absolute; top:0; left:0; width:100%; height:100%; background:#000000; object-fit:contain;">
+          Tu navegador no soporta reproducci?n nativa de video HTML5.
+        </video>
+      ;
+    }
+
+    function renderCinemaFallback(currentVideo) {
+      return 
+        <div class="cinema-fallback-player" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); text-align:center; padding:24px 20px; color:#ffffff; overflow:hidden;">
+          <img src="https://img.youtube.com/vi//hqdefault.jpg" alt="Poster" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.18; filter:blur(4px); pointer-events:none;">
+          
+          <div style="position:relative; z-index:2; max-width:620px; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:rgba(99, 102, 241, 0.18); border:1px solid rgba(99, 102, 241, 0.4); border-radius:30px; padding:6px 16px; font-size:0.8rem; font-weight:700; color:#a5b4fc; margin-bottom:14px; display:inline-flex; align-items:center; gap:8px;">
+              <span>?? Laboratorio II ? Academia UDA</span>
+              <span>?</span>
+              <span></span>
+            </div>
+
+            <h2 style="font-size:1.22rem; font-weight:800; line-height:1.4; margin-bottom:8px; color:#ffffff; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
+              
+            </h2>
+            <p style="font-size:0.84rem; color:#94a3b8; line-height:1.5; margin-bottom:20px;">
+              
+            </p>
+
+            <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; align-items:center;">
+              <a href="" target="_blank" rel="noopener noreferrer" class="btn" style="background:#ef4444; color:#ffffff; font-weight:700; padding:12px 24px; font-size:0.95rem; border-radius:10px; display:inline-flex; align-items:center; gap:8px; text-decoration:none; box-shadow:0 4px 18px rgba(239, 68, 68, 0.45);">
+                ?? Reproducir Clase en YouTube
+              </a>
+              <button class="btn btn-outline" style="border-color:#475569; color:#f1f5f9; background:rgba(30, 41, 59, 0.6); padding:12px 18px; font-size:0.88rem; border-radius:10px;" onclick="retryNativeStream('')">
+                ? Probar Motor Local (PC)
+              </button>
+              <button class="btn btn-outline" style="border-color:#475569; color:#cbd5e1; background:rgba(30, 41, 59, 0.6); padding:12px 18px; font-size:0.88rem; border-radius:10px;" onclick="setPlayerEngine('iframe')">
+                ?? Probar Iframe
+              </button>
+            </div>
+
+            <div style="margin-top:16px; font-size:0.75rem; color:#64748b; line-height:1.4;">
+              ?? <em>En tu computadora o en tu red Wi-Fi puedes usar el motor de streaming sin anuncios abriendo <code>abrir_web.bat</code>.</em>
+            </div>
+          </div>
+        </div>
+      ;
+    }
+
+    function handleNativeVideoError(videoId, title, directUrl) {
+      console.warn("Motor nativo no disponible para " + videoId + ", mostrando Modo Cine.");
+      const vp = document.getElementById("videoViewport");
+      if (vp) {
+        const u = UDA_DATA.units.find(item => item.id === appState.activeUnitId) || UDA_DATA.units[0];
+        const lang = appState.activeVideoLang || "cpp";
+        const videoList = (lang === "cpp") ? (u.videosCpp || [u.videoCpp]) : (u.videosJava || [u.videoJava]);
+        const key = u.id + '_' + lang;
+        const currentIdx = (appState.activeVideoIndex && appState.activeVideoIndex[key] !== undefined) ? appState.activeVideoIndex[key] : 0;
+        const currentVideo = videoList[currentIdx] || { id: videoId, title: title, directUrl: directUrl, topics: "", channel: "" };
+        vp.innerHTML = renderCinemaFallback(currentVideo);
+      }
+    }
+
+    function retryNativeStream(videoId) {
+      appState.playerEngine = "native";
       saveState();
       renderCurrentView();
     }
 
-    function onNativeVideoError(videoId, embedUrl) {
-      console.warn("Native stream error or offline file:// protocol, offering fallback.");
-      const isLocalHost = (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
-      appState.playerEngine = isLocalHost ? "iframe" : "cinema";
+    function setPlayerEngine(engine) {
+      appState.playerEngine = engine;
+      saveState();
+      renderCurrentView();
+    }
+
+    function togglePlayerEngine() {
+      if (appState.playerEngine === "native") {
+        appState.playerEngine = "cinema";
+      } else if (appState.playerEngine === "cinema") {
+        appState.playerEngine = "iframe";
+      } else {
+        appState.playerEngine = "native";
+      }
       saveState();
       renderCurrentView();
     }

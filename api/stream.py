@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from http.server import BaseHTTPRequestHandler
 import urllib.parse
-
-# Motor de streaming nativo dedicado de alta velocidad (sin bloqueos de bot)
-TUNNEL_STREAM_URL = "https://reveals-assessments-introductory-experiments.trycloudflare.com/api/stream"
+import json
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -20,18 +18,20 @@ class handler(BaseHTTPRequestHandler):
 
         if not vid:
             self.send_response(400)
-            self.send_header('Content-Type', 'text/plain; charset=utf-8')
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(b"Parametro 'v' requerido")
+            self.wfile.write(json.dumps({'error': "Parametro 'v' requerido"}).encode('utf-8'))
             return
 
-        # Redirigir al motor de streaming nativo activo de alta velocidad
-        target_url = f"{TUNNEL_STREAM_URL}?v={vid}"
-        self.send_response(302)
-        self.send_header('Location', target_url)
+        # Indicar que para streaming nativo sin restricciones de YouTube se debe conectar al motor local
+        self.send_response(503)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Headers', 'Range')
-        self.send_header('Access-Control-Expose-Headers', 'Content-Range, Content-Length, Accept-Ranges')
-        self.send_header('Cache-Control', 'public, max-age=3600')
         self.end_headers()
+        self.wfile.write(json.dumps({
+            'status': 'remote_mode',
+            'message': 'Para streaming nativo directo sin restricciones de YouTube, use el motor local http://localhost:3000.',
+            'videoId': vid,
+            'directUrl': f"https://www.youtube.com/watch?v={vid}"
+        }).encode('utf-8'))
