@@ -2703,63 +2703,63 @@
 
     function renderVideoViewport(currentVideo, engine, streamEndpoint) {
       if (engine === 'iframe') {
-        return 
+        return `
           <iframe 
             id="lessonIframePlayer"
-            src=""
-            title=""
+            src="${currentVideo.embedUrl}"
+            title="${escapeHtml(currentVideo.title)}"
             frameborder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowfullscreen
             style="position:absolute; top:0; left:0; width:100%; height:100%; border:none; background:#000;">
           </iframe>
-        ;
+        `;
       }
       
       if (engine === 'cinema') {
         return renderCinemaFallback(currentVideo);
       }
 
-      // engine === 'native' (HTML5 MP4 Streaming)
-      return 
+      // Default: engine === 'native' (HTML5 MP4 Streaming Proxy)
+      return `
         <video 
           id="lessonVideoPlayer"
-          src="?v="
+          src="${streamEndpoint}?v=${currentVideo.id}"
           controls
           playsinline
           preload="metadata"
-          poster="https://img.youtube.com/vi//hqdefault.jpg"
-          onerror="handleNativeVideoError('', '', '')"
+          poster="https://img.youtube.com/vi/${currentVideo.id}/hqdefault.jpg"
+          onerror="handleNativeVideoError('${currentVideo.id}', '${escapeHtml(currentVideo.title)}', '${currentVideo.directUrl}')"
           style="position:absolute; top:0; left:0; width:100%; height:100%; background:#000000; object-fit:contain;">
           Tu navegador no soporta reproducci?n nativa de video HTML5.
         </video>
-      ;
+      `;
     }
 
     function renderCinemaFallback(currentVideo) {
-      return 
+      return `
         <div class="cinema-fallback-player" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); text-align:center; padding:24px 20px; color:#ffffff; overflow:hidden;">
-          <img src="https://img.youtube.com/vi//hqdefault.jpg" alt="Poster" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.18; filter:blur(4px); pointer-events:none;">
+          <img src="https://img.youtube.com/vi/${currentVideo.id}/hqdefault.jpg" alt="Poster" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0.18; filter:blur(4px); pointer-events:none;">
           
           <div style="position:relative; z-index:2; max-width:620px; display:flex; flex-direction:column; align-items:center;">
             <div style="background:rgba(99, 102, 241, 0.18); border:1px solid rgba(99, 102, 241, 0.4); border-radius:30px; padding:6px 16px; font-size:0.8rem; font-weight:700; color:#a5b4fc; margin-bottom:14px; display:inline-flex; align-items:center; gap:8px;">
               <span>?? Laboratorio II ? Academia UDA</span>
               <span>?</span>
-              <span></span>
+              <span>${escapeHtml(currentVideo.channel)}</span>
             </div>
 
             <h2 style="font-size:1.22rem; font-weight:800; line-height:1.4; margin-bottom:8px; color:#ffffff; text-shadow:0 2px 8px rgba(0,0,0,0.5);">
-              
+              ${escapeHtml(currentVideo.title)}
             </h2>
             <p style="font-size:0.84rem; color:#94a3b8; line-height:1.5; margin-bottom:20px;">
-              
+              ${escapeHtml(currentVideo.topics)}
             </p>
 
             <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; align-items:center;">
-              <a href="" target="_blank" rel="noopener noreferrer" class="btn" style="background:#ef4444; color:#ffffff; font-weight:700; padding:12px 24px; font-size:0.95rem; border-radius:10px; display:inline-flex; align-items:center; gap:8px; text-decoration:none; box-shadow:0 4px 18px rgba(239, 68, 68, 0.45);">
+              <a href="${currentVideo.directUrl}" target="_blank" rel="noopener noreferrer" class="btn" style="background:#ef4444; color:#ffffff; font-weight:700; padding:12px 24px; font-size:0.95rem; border-radius:10px; display:inline-flex; align-items:center; gap:8px; text-decoration:none; box-shadow:0 4px 18px rgba(239, 68, 68, 0.45); transition:transform 0.15s ease;">
                 ?? Reproducir Clase en YouTube
               </a>
-              <button class="btn btn-outline" style="border-color:#475569; color:#f1f5f9; background:rgba(30, 41, 59, 0.6); padding:12px 18px; font-size:0.88rem; border-radius:10px;" onclick="retryNativeStream('')">
+              <button class="btn btn-outline" style="border-color:#475569; color:#f1f5f9; background:rgba(30, 41, 59, 0.6); padding:12px 18px; font-size:0.88rem; border-radius:10px;" onclick="retryNativeStream('${currentVideo.id}')">
                 ? Probar Motor Local (PC)
               </button>
               <button class="btn btn-outline" style="border-color:#475569; color:#cbd5e1; background:rgba(30, 41, 59, 0.6); padding:12px 18px; font-size:0.88rem; border-radius:10px;" onclick="setPlayerEngine('iframe')">
@@ -2772,7 +2772,7 @@
             </div>
           </div>
         </div>
-      ;
+      `;
     }
 
     function handleNativeVideoError(videoId, title, directUrl) {
